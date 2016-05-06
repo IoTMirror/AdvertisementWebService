@@ -7,6 +7,7 @@ from adv_utils import UserKeywordsDatabase
 app = flask.Flask(__name__)
 tkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_twitter_hashtags")
 ggkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_google_gmail")
+gtkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_google_tasks")
 
 @app.route('/users/<userID>/twitter/hashtags', methods=['GET'])
 def getUserHashtags(userID):
@@ -16,10 +17,10 @@ def getUserHashtags(userID):
 @app.route('/users/<userID>/twitter/hashtags/<keyword>', methods=['PUT'])
 def putUserHashtag(userID,keyword):
   try:
-    tkdb.insertKeyword(userID,keyword)
+    tkdb.insertKeyword(userID,keyword.lower())
     return ('',201)
   except psycopg2.IntegrityError:
-    hashtag = tkdb.getKeyword(userID,keyword)
+    hashtag = tkdb.getKeyword(userID,keyword.lower())
     if hashtag is None:
       return ('',404)
     rowcount = tkdb.updateKeywordCount(userID,hashtag["keyword"],hashtag["count"]+1)
@@ -62,6 +63,38 @@ def postGmailSubject(user_id):
 @app.route('/users/<user_id>/google/gmail/keywords', methods=['DELETE'])
 def deleteGmailKeywords(user_id):
   ggkdb.deleteKeywords(user_id)
+  return ('',204)
+
+@app.route('/users/<user_id>/google/tasks/keywords', methods=['GET'])
+def getTasksKeywords(user_id):
+  keywords = gtkdb.getKeywords(user_id)
+  return json.dumps(keywords)
+
+@app.route('/users/<user_id>/google/tasks/title', methods=['POST'])
+def postTasksTitle(user_id):
+  content = flask.request.get_json(silent = True)
+  if content is None:
+    return ('',400)
+  if "title" not in content:
+    return ('', 400)
+  keywords = content["title"].split()
+  result = {}
+  result["keywords_updated"] = 0
+  for key in keywords:
+    try:
+      gtkdb.insertKeyword(user_id,key.lower())
+      result["keywords_updated"] += 1
+    except psycopg2.IntegrityError:
+      keyword = gtkdb.getKeyword(user_id,key.lower())
+      if keyword is None:
+        continue
+      rowcount = gtkdb.updateKeywordCount(user_id,keyword["keyword"],keyword["count"]+1)
+      result["keywords_updated"] += rowcount
+  return json.dumps(result)
+
+@app.route('/users/<user_id>/google/tasks/keywords', methods=['DELETE'])
+def deleteTasksKeywords(user_id):
+  gtkdb.deleteKeywords(user_id)
   return ('',204)
 
 if __name__ == '__main__':
