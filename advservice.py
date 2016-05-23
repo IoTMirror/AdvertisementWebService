@@ -3,6 +3,8 @@ import json
 import os
 import psycopg2
 from adv_utils import UserKeywordsDatabase
+from iotmirror_commons.flask_security import server_secret_key_required
+from iotmirror_commons.flask_security import authorizeServerBasicEnvKey
 
 app = flask.Flask(__name__)
 tkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_twitter_hashtags")
@@ -10,11 +12,13 @@ ggkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_google_gmail")
 gtkdb = UserKeywordsDatabase(os.environ['DATABASE_URL'], "adv_google_tasks")
 
 @app.route('/users/<userID>/twitter/hashtags', methods=['GET'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def getUserHashtags(userID):
   hashtags = tkdb.getKeywords(userID)
   return json.dumps(hashtags)
 
 @app.route('/users/<userID>/twitter/hashtags/<keyword>', methods=['PUT'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def putUserHashtag(userID,keyword):
   try:
     tkdb.insertKeyword(userID,keyword.lower())
@@ -29,16 +33,19 @@ def putUserHashtag(userID,keyword):
     return ('',204)
 
 @app.route('/users/<userID>/twitter/hashtags', methods=['DELETE'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def deleteUserHashtags(userID):
   tkdb.deleteKeywords(userID)
   return ('',204)
 
 @app.route('/users/<user_id>/google/gmail/keywords', methods=['GET'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def getGmailKeywords(user_id):
   keywords = ggkdb.getKeywords(user_id)
   return json.dumps(keywords)
 
 @app.route('/users/<user_id>/google/gmail/subjects', methods=['POST'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def postGmailSubject(user_id):
   content = flask.request.get_json(silent = True)
   if content is None:
@@ -61,16 +68,19 @@ def postGmailSubject(user_id):
   return json.dumps(result)
 
 @app.route('/users/<user_id>/google/gmail/keywords', methods=['DELETE'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def deleteGmailKeywords(user_id):
   ggkdb.deleteKeywords(user_id)
   return ('',204)
 
 @app.route('/users/<user_id>/google/tasks/keywords', methods=['GET'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def getTasksKeywords(user_id):
   keywords = gtkdb.getKeywords(user_id)
   return json.dumps(keywords)
 
 @app.route('/users/<user_id>/google/tasks/title', methods=['POST'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def postTasksTitle(user_id):
   content = flask.request.get_json(silent = True)
   if content is None:
@@ -93,6 +103,7 @@ def postTasksTitle(user_id):
   return json.dumps(result)
 
 @app.route('/users/<user_id>/google/tasks/keywords', methods=['DELETE'])
+@server_secret_key_required(authorizeServerBasicEnvKey)
 def deleteTasksKeywords(user_id):
   gtkdb.deleteKeywords(user_id)
   return ('',204)
